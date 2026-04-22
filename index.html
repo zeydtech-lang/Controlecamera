@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام المراقبة الاحترافي</title>
+    <title>نظام المراقبة والبث المباشر</title>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; margin: 0; padding: 10px; }
-        h2 { color: #007bff; margin-bottom: 5px; }
-        #chat-box { height: 280px; overflow-y: auto; background: #222; border: 1px solid #444; margin: 10px auto; padding: 10px; width: 95%; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { background: #333; padding: 10px; border-radius: 8px; text-align: right; border-right: 4px solid #007bff; font-size: 0.9rem; }
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; padding: 10px; }
+        h2 { color: #007bff; margin: 10px 0; }
+        #chat-box { height: 300px; overflow-y: auto; background: #1e1e1e; border: 1px solid #333; margin: 10px auto; padding: 10px; width: 95%; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { background: #2c2c2c; padding: 10px; border-radius: 8px; text-align: right; border-right: 4px solid #007bff; font-size: 0.85rem; }
         .alert { border-right: 4px solid #ff4757; color: #ff4757; background: #3d1b1b; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.7; } }
-        video { width: 100%; max-width: 350px; border-radius: 10px; border: 2px solid #444; background: #000; margin-top: 5px; }
-        img { max-width: 100%; border-radius: 5px; margin-top: 10px; border: 1px solid #555; }
+        video { width: 100%; max-width: 350px; border-radius: 10px; border: 2px solid #444; background: #000; display: block; margin: 10px auto; }
+        img { max-width: 100%; border-radius: 5px; margin-top: 8px; }
         .controls { display: flex; flex-direction: column; gap: 8px; align-items: center; padding: 5px; }
-        button { padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; width: 95%; transition: 0.3s; }
+        button { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; width: 95%; transition: 0.2s; }
         
-        .btn-request { background: #6f42c1; font-size: 1rem; } /* طلب لقطة */
-        .btn-toggle-on { background: #28a745; } /* تشغيل */
-        .btn-toggle-off { background: #dc3545; } /* تعطيل */
-        .btn-stop { background: #ffc107; color: black; display: none; }
-        .btn-delete { background: #444; font-size: 0.8rem; margin-top: 15px; }
+        .btn-stream-start { background: #6f42c1; } /* بدء البث */
+        .btn-stream-stop { background: #444; margin-bottom: 10px; } /* إيقاف البث */
+        .btn-toggle-cam { background: #28a745; } /* تشغيل/تعطيل الكاميرا */
+        .btn-stop-alarm { background: #ffc107; color: black; display: none; }
+        .btn-delete { background: #dc3545; font-size: 0.75rem; margin-top: 20px; opacity: 0.6; }
         
-        .status { color: #ffcc00; font-size: 0.85rem; margin-bottom: 10px; padding: 8px; border: 1px dashed #ffcc00; cursor: pointer; }
+        .status { color: #ffcc00; font-size: 0.8rem; margin-bottom: 10px; padding: 8px; border: 1px dashed #ffcc00; cursor: pointer; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -31,15 +31,17 @@
     
     <audio id="phoneAlarm" src="https://actions.google.com/sounds/v1/alarms/emergency_it_is_an_emergency.ogg" loop preload="auto"></audio>
     
-    <div class="status" id="status" onclick="enableAudio()">⚠️ انقر هنا لتفعيل التنبيهات (صوت/اهتزاز)</div>
+    <div class="status" id="status" onclick="enableAudio()">⚠️ انقر هنا لتفعيل الإنذار الصوتي والاهتزاز</div>
 
     <div class="controls">
-        <button class="btn-request" onclick="requestRemotePhoto()">📸 اطلب لقطة من الهاتف الآخر</button>
-        <button id="camToggleBtn" class="btn-toggle-off" onclick="toggleCamera()">🔴 تعطيل الكاميرا المحلية</button>
+        <button class="btn-stream-start" onclick="remoteStream('start_stream')">▶️ بدء بث فيديو مباشر</button>
+        <button class="btn-stream-stop" onclick="remoteStream('stop_stream')">⏹️ إيقاف البث المباشر</button>
+        
+        <button id="camToggleBtn" class="btn-toggle-cam" onclick="toggleCamera()">🔴 تعطيل الكاميرا المحلية</button>
         
         <video id="video" autoplay playsinline muted></video>
         
-        <button id="stopBtn" class="btn-stop" onclick="stopAlarm()">🔕 إيقاف الإنذار والاهتزاز</button>
+        <button id="stopBtn" class="btn-stop-alarm" onclick="stopAlarm()">🔕 إيقاف الإنذار</button>
     </div>
 
     <div id="chat-box"></div>
@@ -50,15 +52,11 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-        // إعدادات Firebase الخاصة بك
         const firebaseConfig = {
             apiKey: "AIzaSyAW3yfrREROLkp8E4MvGB8srTovzxb0VsI",
             authDomain: "controlcamera.firebaseapp.com",
             databaseURL: "https://controlcamera-default-rtdb.firebaseio.com/",
-            projectId: "controlcamera",
-            storageBucket: "controlcamera.firebasestorage.app",
-            messagingSenderId: "218315302257",
-            appId: "1:218315302257:web:39f4746cae5730308902d0"
+            projectId: "controlcamera"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -73,10 +71,11 @@
 
         let localStream = null;
         let isCamOpen = false;
+        let streamInterval = null;
         let motionInterval = null;
         let lastFrameData = null;
 
-        // 1. تشغيل/تعطيل الكاميرا المحلية
+        // 1. التحكم في الكاميرا المحلية
         function toggleCamera() {
             if (isCamOpen) {
                 if (localStream) localStream.getTracks().forEach(t => t.stop());
@@ -84,22 +83,49 @@
                 clearInterval(motionInterval);
                 isCamOpen = false;
                 camToggleBtn.innerText = "🟢 تشغيل الكاميرا المحلية";
-                camToggleBtn.className = "btn-toggle-on";
+                camToggleBtn.style.background = "#28a745";
             } else {
-                const constraints = { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } };
-                navigator.mediaDevices.getUserMedia(constraints)
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280, height: 720 } })
                     .then(stream => {
                         localStream = stream;
                         videoElement.srcObject = stream;
                         isCamOpen = true;
                         camToggleBtn.innerText = "🔴 تعطيل الكاميرا المحلية";
-                        camToggleBtn.className = "btn-toggle-off";
-                        motionInterval = setInterval(detectMotion, 1500);
-                    }).catch(err => alert("خطأ في الوصول للكاميرا"));
+                        camToggleBtn.style.background = "#dc3545";
+                        motionInterval = setInterval(detectMotion, 2000); // رصد حركة كل ثانيتين
+                    });
             }
         }
 
-        // 2. اكتشاف الحركة (تنبيه صامت يرسل للهاتف الآخر)
+        // 2. التقاط وإرسال صورة (متوازنة الوضوح)
+        function captureAndSend(isStream = false) {
+            if (!isCamOpen) return;
+            const canvas = document.createElement('canvas');
+            canvas.width = 800; // وضوح متوسط ممتاز
+            const scale = 800 / videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = canvas.toDataURL('image/jpeg', 0.6); // جودة 60%
+            
+            if(isStream) {
+                // في حالة البث، نقوم بتحديث سجل واحد فقط لتوفير المساحة
+                db.ref('live_stream').set({
+                    image: imageData,
+                    timestamp: new Date().toLocaleTimeString('ar-DZ')
+                });
+            } else {
+                logsRef.push().set({
+                    message: "📸 لقطة يدوية محليّة",
+                    timestamp: new Date().toLocaleTimeString('ar-DZ'),
+                    type: "msg",
+                    image: imageData
+                });
+            }
+        }
+
+        // 3. رصد الحركة
         function detectMotion() {
             if (!isCamOpen) return;
             const canvas = document.createElement('canvas');
@@ -107,98 +133,74 @@
             canvas.width = 50; canvas.height = 50;
             ctx.drawImage(videoElement, 0, 0, 50, 50);
             const currentFrame = ctx.getImageData(0, 0, 50, 50).data;
-
             if (lastFrameData) {
                 let diff = 0;
                 for (let i = 0; i < currentFrame.length; i += 4) {
                     if (Math.abs(currentFrame[i] - lastFrameData[i]) > 50) diff++;
                 }
                 if (diff > 120) {
-                    logsRef.push().set({
-                        message: "⚠️ تنبيه: تم رصد حركة أمام الكاميرا!",
-                        timestamp: new Date().toLocaleTimeString('ar-DZ'),
-                        type: "alert"
-                    });
+                    logsRef.push().set({ message: "⚠️ تنبيه: حركة أمام الكاميرا!", timestamp: new Date().toLocaleTimeString('ar-DZ'), type: "alert" });
                 }
             }
             lastFrameData = currentFrame;
         }
 
-        // 3. التقاط صورة (وضوح متوسط متوازن)
-        function captureAndSend(isAuto = false) {
-            if (!isCamOpen) return;
-            const canvas = document.createElement('canvas');
-            const targetWidth = 800; // عرض متوسط واضح
-            const scale = targetWidth / videoElement.videoWidth;
-            canvas.width = targetWidth;
-            canvas.height = videoElement.videoHeight * scale;
-            
-            const ctx = canvas.getContext('2d');
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-            
-            logsRef.push().set({
-                message: isAuto ? "📸 لقطة استجابة لطلب عن بعد" : "📸 لقطة يدوية محليّة",
-                timestamp: new Date().toLocaleTimeString('ar-DZ'),
-                type: "msg",
-                image: canvas.toDataURL('image/jpeg', 0.7) // جودة 70%
-            });
-        }
-
-        // 4. طلب لقطة من الهاتف الآخر
-        function requestRemotePhoto() {
-            cmdRef.set({ action: "take_photo", time: Date.now() });
-            alert("تم إرسال طلب التقاط صورة...");
+        // 4. التحكم في البث عن بعد
+        function remoteStream(action) {
+            cmdRef.set({ action: action, time: Date.now() });
         }
 
         // 5. الاستماع للأوامر (للهاتف الذي يعمل ككاميرا)
         cmdRef.on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data && data.action === "take_photo" && isCamOpen) {
-                captureAndSend(true);
-                cmdRef.set(null); // مسح الأمر بعد التنفيذ
+            if (!data || !isCamOpen) return;
+            if (data.action === "start_stream") {
+                if(!streamInterval) streamInterval = setInterval(() => captureAndSend(true), 1500);
+            } else if (data.action === "stop_stream") {
+                clearInterval(streamInterval);
+                streamInterval = null;
+                db.ref('live_stream').set(null);
             }
         });
 
-        // 6. التعامل مع التنبيهات المستلمة (صوت واهتزاز)
-        logsRef.limitToLast(1).on('child_added', (snapshot) => {
+        // 6. عرض السجل والإنذارات
+        logsRef.limitToLast(5).on('child_added', (snapshot) => {
             const data = snapshot.val();
-            const box = document.getElementById('chat-box');
             const div = document.createElement('div');
             div.className = `msg ${data.type === 'alert' ? 'alert' : ''}`;
             div.innerHTML = `<small>${data.timestamp}</small><br>${data.message}`;
             if (data.image) div.innerHTML += `<br><img src="${data.image}">`;
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
-
+            document.getElementById('chat-box').prepend(div); // وضع الأحدث في الأعلى
+            
             if (data.type === "alert") {
                 phoneAlarm.play().catch(() => {});
-                if ("vibrate" in navigator) navigator.vibrate([500, 200, 500, 200, 500]);
+                if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]);
                 stopBtn.style.display = "block";
             }
         });
 
-        function stopAlarm() {
-            phoneAlarm.pause();
-            phoneAlarm.currentTime = 0;
-            if ("vibrate" in navigator) navigator.vibrate(0);
-            stopBtn.style.display = "none";
-        }
+        // 7. الاستماع للبث المباشر (للهاتف المراقب)
+        db.ref('live_stream').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                // تحديث صورة البث في أعلى السجل دون تكرار
+                let liveDiv = document.getElementById('live-viewer');
+                if(!liveDiv) {
+                    liveDiv = document.createElement('div');
+                    liveDiv.id = 'live-viewer';
+                    liveDiv.className = 'msg';
+                    liveDiv.style.borderColor = '#6f42c1';
+                    document.getElementById('chat-box').prepend(liveDiv);
+                }
+                liveDiv.innerHTML = `<b style="color:#6f42c1">🔴 بث مباشر الآن</b><br><small>${data.timestamp}</small><br><img src="${data.image}">`;
+            }
+        });
 
-        function enableAudio() {
-            phoneAlarm.play().then(() => phoneAlarm.pause());
-            document.getElementById('status').innerText = "✅ النظام جاهز ومفعل";
-            document.getElementById('status').style.color = "#00ff00";
-            document.getElementById('status').style.borderColor = "#00ff00";
-        }
+        function stopAlarm() { phoneAlarm.pause(); phoneAlarm.currentTime = 0; stopBtn.style.display = "none"; }
+        function enableAudio() { phoneAlarm.play().then(() => phoneAlarm.pause()); document.getElementById('status').innerText = "✅ نظام التنبيه مفعل"; }
+        function clearData() { if(confirm("مسح السجل؟")) { logsRef.remove(); db.ref('live_stream').remove(); document.getElementById('chat-box').innerHTML = ""; } }
 
-        function clearData() {
-            if (confirm("هل تريد مسح جميع البيانات؟")) logsRef.remove();
-        }
-
-        // تشغيل الكاميرا تلقائياً عند البدء
-        toggleCamera();
+        toggleCamera(); // بدء الكاميرا
     </script>
 </body>
 </html>
