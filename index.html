@@ -3,133 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام المراقبة البسيط - Controlcamera</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/push.js/1.0.8/push.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
+    <title>نظام المراقبة مع اهتزاز وإنذار طويل</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; text-align: center; margin: 0; padding: 10px; }
-        .container { background: #1e1e1e; border-radius: 12px; padding: 15px; max-width: 400px; margin: auto; }
-        #status { font-size: 0.8rem; color: #2ecc71; margin-bottom: 10px; }
-        video { width: 100%; border-radius: 8px; background: #000; border: 1px solid #333; }
-        #chat-box { height: 300px; overflow-y: auto; background: #252525; border-radius: 8px; padding: 10px; margin-top: 15px; border: 1px solid #444; }
-        .msg { background: #333; margin-bottom: 8px; padding: 10px; border-radius: 8px; text-align: right; border-right: 4px solid #007bff; }
-        .alert { border-right: 4px solid #ff4757; color: #ff4757; background: #3d1b1b; font-weight: bold; }
-        .controls { display: flex; gap: 5px; margin-top: 10px; }
-        input { flex: 1; padding: 12px; border-radius: 5px; border: 1px solid #444; background: #2d2d2d; color: white; }
-        button { padding: 12px 15px; background: #007bff; color: white; border: none; border-radius: 5px; font-weight: bold; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; margin: 0; padding: 10px; }
+        h2 { color: #007bff; }
+        #chat-box { height: 300px; overflow-y: auto; background: #222; border: 1px solid #444; margin: 15px auto; padding: 10px; width: 95%; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { background: #333; padding: 10px; border-radius: 8px; text-align: right; border-right: 4px solid #007bff; }
+        .alert { border-right: 4px solid #ff4757; color: #ff4757; background: #3d1b1b; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.7; } }
+        video { width: 100%; max-width: 350px; border-radius: 10px; border: 2px solid #444; }
+        button { padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; width: 95%; margin-bottom: 10px; }
+        .btn-photo { background: #28a745; }
+        .btn-stop { background: #ffc107; color: black; display: none; } /* زر إيقاف الإنذار */
+        .btn-delete { background: #dc3545; margin-top: 20px; font-size: 0.8rem; }
+        .status { color: #ffcc00; font-size: 0.9rem; margin: 10px; padding: 10px; border: 1px dashed #ffcc00; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>المراقب البسيط 🛡️</h2>
-    <div id="status">جاري الاتصال...</div>
+    <h2>نظام المراقبة الذكي 🛡️</h2>
     
+    <audio id="phoneAlarm" src="https://actions.google.com/sounds/v1/alarms/emergency_it_is_an_emergency.ogg" loop preload="auto"></audio>
+    
+    <div class="status" id="status" onclick="enableAudio()">⚠️ اضغط هنا لتفعيل نظام الصوت والاهتزاز</div>
+
+    <button id="stopBtn" class="btn-stop" onclick="stopAlarm()">🔕 إيقاف صوت الإنذار والاهتزاز</button>
+
     <video id="video" autoplay playsinline muted></video>
     
+    <button class="btn-photo" onclick="captureAndSend()">📸 إرسال لقطة يدوية</button>
+
     <div id="chat-box"></div>
 
-    <div class="controls">
-        <input type="text" id="msgInput" placeholder="رسالة سريعة...">
-        <button onclick="sendManual()">إرسال</button>
-    </div>
-</div>
+    <button class="btn-delete" onclick="clearData()">🗑️ مسح السجل</button>
 
-<script>
-    // إعدادات Firebase الخاصة بك
-    const firebaseConfig = {
-        apiKey: "AIzaSyAW3yfrREROLkp8E4MvGB8srTovzxb0VsI",
-        authDomain: "controlcamera.firebaseapp.com",
-        databaseURL: "https://controlcamera-default-rtdb.firebaseio.com/",
-        projectId: "controlcamera",
-        storageBucket: "controlcamera.firebasestorage.app",
-        messagingSenderId: "218315302257",
-        appId: "1:218315302257:web:39f4746cae5730308902d0"
-    };
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('simple_monitor');
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAW3yfrREROLkp8E4MvGB8srTovzxb0VsI",
+            authDomain: "controlcamera.firebaseapp.com",
+            databaseURL: "https://controlcamera-default-rtdb.firebaseio.com/",
+            projectId: "controlcamera"
+        };
 
-    const video = document.getElementById('video');
-    const chatBox = document.getElementById('chat-box');
-    let lastFrame = null;
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database().ref('secure_logs');
+        const videoElement = document.getElementById('video');
+        const phoneAlarm = document.getElementById('phoneAlarm');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusText = document.getElementById('status');
+        let lastFrameData = null;
 
-    // طلب إذن الإشعارات
-    Push.Permission.request();
-
-    // تشغيل الكاميرا
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-    .then(stream => {
-        video.srcObject = stream;
-        document.getElementById('status').innerText = "النظام يعمل الآن ✅";
-        setInterval(detectMotion, 1000); // فحص الحركة كل ثانية
-    })
-    .catch(() => {
-        document.getElementById('status').innerText = "وضع الاستقبال فقط";
-        video.style.display = "none";
-    });
-
-    // كود اكتشاف الحركة البرمجي (بدون ذكاء اصطناعي)
-    function detectMotion() {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 40; canvas.height = 40; // تصغير جداً لتوفير المعالج
-        ctx.drawImage(video, 0, 0, 40, 40);
-        const currentFrame = ctx.getImageData(0, 0, 40, 40).data;
-
-        if (lastFrame) {
-            let change = 0;
-            for (let i = 0; i < currentFrame.length; i += 4) {
-                // حساب الفرق بين الإطار الحالي والسابق
-                const diff = Math.abs(currentFrame[i] - lastFrame[i]);
-                if (diff > 50) change++; 
-            }
-            // إذا تحرك أكثر من 10% من الصورة، أرسل تنبيهاً
-            if (change > 160) { 
-                postToFirebase("⚠️ حركة مكتشفة!", "alert");
-            }
-        }
-        lastFrame = currentFrame;
-    }
-
-    function postToFirebase(text, type) {
-        db.push().set({
-            text: text,
-            time: new Date().toLocaleTimeString('ar-DZ'),
-            type: type
-        });
-    }
-
-    function sendManual() {
-        const input = document.getElementById('msgInput');
-        if (input.value) {
-            postToFirebase(input.value, "msg");
-            input.value = "";
-        }
-    }
-
-    // استقبال البيانات وإصدار الإشعارات
-    db.limitToLast(1).on('child_added', (snap) => {
-        const d = snap.val();
-        const div = document.createElement('div');
-        div.className = `msg ${d.type === 'alert' ? 'alert' : ''}`;
-        div.innerHTML = `<small>${d.time}</small><br>${d.text}`;
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        if (d.type === 'alert') {
-            // إشعار منبثق يهز الهاتف
-            Push.create("تنبيه من الكاميرا", {
-                body: d.text,
-                timeout: 5000,
-                onClick: function () { window.focus(); this.close(); }
+        // تفعيل الصوت والاهتزاز
+        function enableAudio() {
+            phoneAlarm.play().then(() => {
+                phoneAlarm.pause();
+                phoneAlarm.currentTime = 0;
             });
-            if (navigator.vibrate) navigator.vibrate(500);
+            statusText.innerText = "✅ النظام جاهز (صوت واهتزاز)";
+            statusText.style.borderColor = "#00ff00";
+            statusText.style.color = "#00ff00";
         }
-    });
-</script>
+
+        // إيقاف الإنذار يدوياً
+        function stopAlarm() {
+            phoneAlarm.pause();
+            phoneAlarm.currentTime = 0;
+            if ("vibrate" in navigator) navigator.vibrate(0); // إيقاف الاهتزاز
+            stopBtn.style.display = "none";
+        }
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => { 
+                videoElement.srcObject = stream; 
+                setInterval(detectMotion, 1500); 
+            });
+
+        function detectMotion() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 50; canvas.height = 50;
+            ctx.drawImage(videoElement, 0, 0, 50, 50);
+            const currentFrame = ctx.getImageData(0, 0, 50, 50).data;
+
+            if (lastFrameData) {
+                let diff = 0;
+                for (let i = 0; i < currentFrame.length; i += 4) {
+                    if (Math.abs(currentFrame[i] - lastFrameData[i]) > 50) diff++;
+                }
+                if (diff > 120) { 
+                    sendToFirebase("⚠️ تحذير: رصد حركة مريبة!", "alert");
+                }
+            }
+            lastFrameData = currentFrame;
+        }
+
+        function captureAndSend() {
+            const canvas = document.createElement('canvas');
+            const scale = 400 / videoElement.videoWidth;
+            canvas.width = 400; canvas.height = videoElement.videoHeight * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            sendToFirebase("📷 لقطة يدوية", "msg", canvas.toDataURL('image/jpeg', 0.3));
+        }
+
+        function sendToFirebase(text, type, img = null) {
+            database.push().set({
+                message: text,
+                timestamp: new Date().toLocaleTimeString('ar-DZ'),
+                type: type,
+                image: img
+            });
+        }
+
+        function clearData() {
+            if(confirm("مسح السجل؟")) database.remove();
+        }
+
+        database.limitToLast(1).on('child_added', (snapshot) => {
+            const data = snapshot.val();
+            const box = document.getElementById('chat-box');
+            
+            const div = document.createElement('div');
+            div.className = `msg ${data.type === 'alert' ? 'alert' : ''}`;
+            div.innerHTML = `<small>${data.timestamp}</small><br>${data.message}`;
+            if (data.image) div.innerHTML += `<br><img src="${data.image}" style="width:100%">`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+
+            if (data.type === "alert") {
+                // 1. تشغيل الصوت الطويل (مكرر)
+                phoneAlarm.play();
+                
+                // 2. تشغيل الاهتزاز (نمط: اهتزاز 500ms، توقف 200ms، اهتزاز 500ms)
+                if ("vibrate" in navigator) {
+                    navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+                }
+
+                // 3. إظهار زر الإيقاف
+                stopBtn.style.display = "block";
+            }
+        });
+    </script>
 </body>
 </html>
