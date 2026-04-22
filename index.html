@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام المراقبة - Controlcamera</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; margin: 0; padding: 10px; }
+        h2 { color: #007bff; font-size: 1.2rem; }
+        #chat-box { height: 300px; overflow-y: auto; background: #222; border: 1px solid #444; margin: 15px auto; padding: 10px; width: 95%; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { background: #333; padding: 10px; border-radius: 8px; text-align: right; border-right: 4px solid #007bff; font-size: 0.9rem; }
+        .alert { border-right: 4px solid #ff4757; color: #ff4757; background: #3d1b1b; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.7; } }
+        video { width: 100%; max-width: 350px; border-radius: 10px; background: #000; border: 2px solid #444; margin-bottom: 10px; }
+        .controls { display: flex; gap: 5px; justify-content: center; width: 95%; margin: auto; }
+        input { flex: 1; padding: 12px; border-radius: 5px; border: 1px solid #444; background: #333; color: white; }
+        button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        small { color: #888; font-size: 0.7rem; }
+    </style>
+</head>
+<body>
+
+    <h2>نظام المراقبة الذكي 🛡️</h2>
+    
+    <video id="video" autoplay playsinline muted></video>
+    
+    <div id="chat-box"></div>
+
+    <div class="controls">
+        <input type="text" id="messageInput" placeholder="اكتب رسالة هنا...">
+        <button onclick="sendMessage()">إرسال</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // إعدادات مشروعك الخاصة (Controlcamera)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAW3yfrREROLkp8E4MvGB8srTovzxb0VsI",
+            authDomain: "controlcamera.firebaseapp.com",
+            databaseURL: "https://controlcamera-default-rtdb.firebaseio.com/",
+            projectId: "controlcamera",
+            storageBucket: "controlcamera.firebasestorage.app",
+            messagingSenderId: "218315302257",
+            appId: "1:218315302257:web:39f4746cae5730308902d0"
+        };
+
+        // تهيئة Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database().ref('secure_logs');
+
+        const videoElement = document.getElementById('video');
+        const chatBox = document.getElementById('chat-box');
+        let lastFrameData = null;
+
+        // 1. تشغيل الكاميرا واكتشاف الحركة
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => {
+                videoElement.srcObject = stream;
+                // تحليل الصورة كل ثانية لاكتشاف الحركة
+                setInterval(detectMotion, 1000);
+            })
+            .catch(err => {
+                console.log("وضع الاستقبال فقط: " + err);
+                videoElement.style.display = "none";
+            });
+
+        function detectMotion() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 50; 
+            canvas.height = 50;
+            ctx.drawImage(videoElement, 0, 0, 50, 50);
+            const currentFrame = ctx.getImageData(0, 0, 50, 50).data;
+
+            if (lastFrameData) {
+                let diff = 0;
+                for (let i = 0; i < currentFrame.length; i += 4) {
+                    // حساب الفرق في الألوان
+                    if (Math.abs(currentFrame[i] - lastFrameData[i]) > 40) diff++;
+                }
+                // إذا كان التغيير ملحوظاً، أرسل تنبيه
+                if (diff > 150) { 
+                    sendNotification("⚠️ تنبيه: تم رصد حركة أمام الكاميرا!", "alert");
+                }
+            }
+            lastFrameData = currentFrame;
+        }
+
+        // 2. وظائف الإرسال لقاعدة البيانات
+        function sendNotification(text, type) {
+            database.push().set({
+                message: text,
+                timestamp: new Date().toLocaleTimeString('ar-DZ'),
+                type: type
+            });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            if (input.value.trim() !== "") {
+                sendNotification(input.value, "msg");
+                input.value = "";
+            }
+        }
+
+        // 3. استلام الرسائل وعرضها فوراً
+        database.limitToLast(15).on('child_added', (snapshot) => {
+            const data = snapshot.val();
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `msg ${data.type === 'alert' ? 'alert' : ''}`;
+            messageDiv.innerHTML = `<small>${data.timestamp}</small><br>${data.message}`;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    </script>
+</body>
+</html>
