@@ -3,68 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZeydTech OCR - تجربة استخراج النص</title>
+    <title>مستخرج النصوص الذكي | ZeydTech</title>
     <style>
-        :root { --primary: #2563eb; --bg: #f1f5f9; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
-        .card { background: white; width: 100%; max-width: 700px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
-        h1 { color: var(--primary); margin-bottom: 20px; }
-        .upload-area { border: 3px dashed #cbd5e1; padding: 30px; border-radius: 15px; cursor: pointer; transition: 0.3s; background: #fafafa; }
-        .upload-area:hover { border-color: var(--primary); background: #eff6ff; }
-        #output { width: 100%; height: 300px; margin-top: 20px; border-radius: 10px; border: 1px solid #e2e8f0; padding: 15px; font-size: 16px; background: #fff; white-space: pre-wrap; text-align: right; overflow-y: auto; }
-        .loader { display: none; margin: 15px 0; color: var(--primary); font-weight: bold; }
-        .btn-copy { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 10px; font-size: 14px; }
+        :root { --p: #2563eb; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; width: 100%; max-width: 500px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; }
+        .upload-box { border: 2px dashed #3b82f6; padding: 30px; border-radius: 15px; cursor: pointer; margin: 20px 0; background: #eff6ff; }
+        #output { width: 100%; height: 200px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; margin-top: 20px; background: #fff; text-align: right; overflow-y: auto; font-size: 14px; white-space: pre-wrap; }
+        .loader { display: none; margin: 10px 0; color: #3b82f6; font-weight: bold; }
+        .error-msg { color: #ef4444; font-size: 13px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h1>مستخرج النصوص الذكي 📄</h1>
-    <p>ارفعي صورة الاختبار (عربي/فرنسي) لرؤية النص المستخرج</p>
-
-    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-        <p id="fileName">اضغطي هنا لرفع الصورة</p>
+    <h2 style="color:var(--p)">مستخرج النصوص الذكي 📄</h2>
+    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+        <span id="fileText">اضغطي هنا لرفع الصورة</span>
         <input type="file" id="fileInput" hidden accept="image/*">
     </div>
 
-    <div id="loader" class="loader">⏳ جاري معالجة الصورة... انتظر ثواني</div>
-
-    <div id="output" placeholder="النص المستخرج سيظهر هنا..."></div>
-    
-    <button class="btn-copy" onclick="copyText()">نسخ النص المستخرج</button>
+    <div id="loader" class="loader">⏳ جاري المعالجة...</div>
+    <div id="output"></div>
+    <div id="errorLog" class="error-msg"></div>
 </div>
 
 <script>
+    // تأكدي من أن هذا المفتاح لا يزال يعمل (K89470887188957)
     const API_KEY = "K89470887188957";
 
-    document.getElementById('fileInput').onchange = function(e) {
+    document.getElementById('fileInput').onchange = async function(e) {
         const file = e.target.files[0];
         if (!file) return;
-        
-        document.getElementById('fileName').innerText = "تم اختيار: " + file.name;
-        handleOCR(file);
-    };
 
-    async function handleOCR(file) {
+        // فحص حجم الملف (إذا كان أكبر من 1MB قد يرفضه السيرفر في النسخة المجانية)
+        if (file.size > 1024 * 1024) {
+            alert("الصورة كبيرة جداً، يرجى اختيار صورة أقل من 1 ميجابايت للتجربة.");
+            return;
+        }
+
         const loader = document.getElementById('loader');
         const output = document.getElementById('output');
+        const errorLog = document.getElementById('errorLog');
         
+        document.getElementById('fileText').innerText = file.name;
         loader.style.display = 'block';
         output.innerText = "";
-
-        // تحويل الصورة إلى Base64 لضمان أفضل توافق مع الـ API
-        const base64Image = await toBase64(file);
+        errorLog.innerText = "";
 
         const formData = new FormData();
-        formData.append("base64Image", base64Image);
-        formData.append("language", "ara"); // يدعم العربية
+        formData.append("file", file);
         formData.append("apikey", API_KEY);
-        formData.append("OCREngine", "2"); // Engine 2 هو الأفضل للغة العربية
+        formData.append("language", "ara");
+        formData.append("OCREngine", "2");
 
         try {
             const response = await fetch('https://api.ocr.space/parse/image', {
                 method: 'POST',
-                body: formData
+                body: formData // إرسال كـ FormData هو الأفضل للمتصفحات الحديثة
             });
 
             const data = await response.json();
@@ -72,30 +68,15 @@
             if (data.OCRExitCode === 1) {
                 output.innerText = data.ParsedResults[0].ParsedText;
             } else {
-                output.innerText = "خطأ من السيرفر: " + data.ErrorMessage;
+                errorLog.innerText = "فشل السيرفر: " + data.ErrorMessage;
             }
         } catch (error) {
-            output.innerText = "خطأ CORS أو اتصال. يرجى تشغيل الملف عبر سيرفر محلي (Live Server) أو رفعه على GitHub Pages.";
-            console.error("Error:", error);
+            errorLog.innerText = "خطأ في الشبكة أو CORS. جربي رفع الكود على GitHub Pages أو استخدام متصفح خفي (Incognito).";
+            console.error(error);
         } finally {
             loader.style.display = 'none';
         }
-    }
-
-    // دالة لتحويل الملف إلى Base64
-    const toBase64 = file => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
-
-    function copyText() {
-        const text = document.getElementById('output').innerText;
-        if (!text) return;
-        navigator.clipboard.writeText(text);
-        alert("تم نسخ النص!");
-    }
+    };
 </script>
 
 </body>
