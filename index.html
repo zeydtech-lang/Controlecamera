@@ -2,88 +2,172 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZeydTech OCR | النسخة النهائية</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>دردشة ZeydTech الذكية</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --p: #2563eb; --bg: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
-        .card { background: white; width: 100%; max-width: 500px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; }
-        .upload-box { border: 2px dashed #3b82f6; padding: 30px; border-radius: 15px; cursor: pointer; margin: 20px 0; background: #eff6ff; }
-        #output { width: 100%; height: 250px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; margin-top: 20px; background: #fff; text-align: right; overflow-y: auto; font-size: 14px; white-space: pre-wrap; }
-        .loader { display: none; margin: 10px 0; color: #3b82f6; font-weight: bold; }
-        .info { font-size: 12px; color: #64748b; margin-top: 10px; }
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #0b141a);
+            --text-color: var(--tg-theme-text-color, #ffffff);
+            --hint-color: var(--tg-theme-hint-color, #707579);
+            --button-color: var(--tg-theme-button-color, #00a884);
+            --button-text: var(--tg-theme-button-text-color, #ffffff);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #1c272f);
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--secondary-bg);
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 15px;
+            font-size: 15px;
+            line-height: 1.4;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .sent {
+            align-self: flex-end;
+            background-color: var(--button-color);
+            color: var(--button-text);
+            border-bottom-right-radius: 2px;
+        }
+
+        .received {
+            align-self: flex-start;
+            background-color: var(--secondary-bg);
+            border-bottom-left-radius: 2px;
+        }
+
+        .user-name {
+            display: block;
+            font-size: 0.7em;
+            margin-bottom: 4px;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .footer {
+            padding: 10px;
+            background-color: var(--secondary-bg);
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            background-color: var(--bg-color);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-color);
+            padding: 12px;
+            border-radius: 20px;
+            outline: none;
+        }
+
+        button {
+            background-color: var(--button-color);
+            color: var(--button-text);
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2 style="color:var(--p)">مستخرج النصوص الذكي 📄</h2>
-    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-        <span id="fileText">اضغطي لرفع صورة الاختبار</span>
-        <input type="file" id="fileInput" hidden accept="image/*">
-    </div>
+<header>غرفة دردشة ZeydTech الجماعية</header>
 
-    <div id="loader" class="loader">⏳ جاري تجاوز القيود والمعالجة...</div>
-    <div id="output"></div>
-    <p class="info">ملاحظة: إذا لم يظهر النص، تأكدي من أن حجم الصورة صغير.</p>
+<div id="chat-container">
+    <div class="message received">
+        <span class="user-name">النظام</span>
+        مرحباً بك! أي رسالة تكتبها هنا ستظهر في القناة ليراها الجميع.
+    </div>
+</div>
+
+<div class="footer">
+    <input type="text" id="msgInput" placeholder="اكتب رسالة..." autocomplete="off">
+    <button id="sendBtn">🚀</button>
 </div>
 
 <script>
-    const API_KEY = "K89470887188957";
-    // استخدام بروكسي عام لتجاوز مشكلة CORS
-    const PROXY_URL = "https://api.allorigins.win/raw?url=";
-    const OCR_URL = encodeURIComponent("https://api.ocr.space/parse/image");
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
-    document.getElementById('fileInput').onchange = async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+    // البيانات المدمجة
+    const BOT_TOKEN = "8799708539:AAFFvqiwSvFBTACNrnZtOO5noYErlLsc958";
+    const CHANNEL_ID = "@fastfoodt"; 
 
-        const loader = document.getElementById('loader');
-        const output = document.getElementById('output');
-        document.getElementById('fileText').innerText = file.name;
-        
-        loader.style.display = 'block';
-        output.innerText = "";
+    const chatContainer = document.getElementById('chat-container');
+    const msgInput = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const myName = tg.initDataUnsafe?.user?.first_name || "مستخدم";
 
-        // تحويل الصورة لـ Base64 لأن البروكسي يفضل النصوص
-        const base64 = await toBase64(file);
+    function addMessage(name, text, type) {
+        const div = document.createElement('div');
+        div.className = `message ${type}`;
+        div.innerHTML = `<span class="user-name">${name}</span>${text}`;
+        chatContainer.appendChild(div);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
 
-        const formData = new FormData();
-        formData.append("base64Image", base64);
-        formData.append("apikey", API_KEY);
-        formData.append("language", "ara");
-        formData.append("OCREngine", "2");
+    async function sendMessage() {
+        const text = msgInput.value.trim();
+        if (!text) return;
 
+        addMessage(myName, text, 'sent');
+        msgInput.value = '';
+        tg.HapticFeedback.impactOccurred('medium');
+
+        // إرسال البيانات لتلجرام
         try {
-            // نرسل الطلب عبر البروكسي
-            const response = await fetch('https://api.ocr.space/parse/image', {
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: CHANNEL_ID,
+                    text: `<b>👤 ${myName}:</b>\n${text}`,
+                    parse_mode: 'HTML'
+                })
             });
+        } catch (e) { console.error("خطأ في الاتصال"); }
+    }
 
-            // إذا استمر المتصفح في الرفض، سنستخدم خطة بديلة (Base64 URL)
-            const data = await response.json();
-
-            if (data.ParsedResults) {
-                output.innerText = data.ParsedResults[0].ParsedText;
-            } else {
-                output.innerText = "فشل المعالجة: " + data.ErrorMessage;
-            }
-        } catch (error) {
-            output.innerText = "لا تزال هناك قيود CORS. يرجى تجربة فتح المتصفح بوضع 'Desktop Site' أو تجربة متصفح آخر.";
-            console.error(error);
-        } finally {
-            loader.style.display = 'none';
-        }
-    };
-
-    const toBase64 = file => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
+    sendBtn.onclick = sendMessage;
+    msgInput.onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
 </script>
-
 </body>
 </html>
