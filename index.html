@@ -2,32 +2,28 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZeydTech Live Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دردشة ZeydTech</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --tg-bg: #0b141a; --tg-sec: #1c272f; --tg-btn: #00a884; }
-        body { font-family: sans-serif; background: var(--tg-bg); color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        header { background: var(--tg-sec); padding: 15px; text-align: center; border-bottom: 2px solid var(--tg-btn); font-weight: bold; }
-        #chat-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 14px; border-radius: 12px; background: var(--tg-sec); max-width: 80%; font-size: 14px; align-self: flex-start; position: relative; }
-        .my-msg { align-self: flex-end; background: #005c4b; }
-        .user { display: block; font-size: 11px; color: var(--tg-btn); font-weight: bold; margin-bottom: 3px; }
+        body { font-family: sans-serif; background-color: #0b141a; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        header { background: #1c272f; padding: 15px; text-align: center; border-bottom: 2px solid #00a884; font-weight: bold; }
+        #chat-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { padding: 10px; border-radius: 10px; background: #1c272f; max-width: 85%; font-size: 14px; align-self: flex-start; border-right: 3px solid #00a884; }
+        .my-msg { align-self: flex-end; background: #005c4b; border-right: none; border-left: 3px solid #fff; }
+        .user-name { display: block; font-size: 11px; color: #00a884; font-weight: bold; margin-bottom: 3px; }
         .footer { background: #121b22; padding: 10px; display: flex; gap: 8px; border-top: 1px solid #2a3942; }
         input { flex: 1; background: #2a3942; border: 1px solid #3b4a54; color: white; padding: 12px; border-radius: 20px; outline: none; }
-        button { background: var(--tg-btn); color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; }
+        button { background: #00a884; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<header>ZeydTech - دردشة المتصلين الآن</header>
-
-<div id="chat-box">
-    </div>
-
+<header>دردشة ZeydTech الحية</header>
+<div id="chat-container"></div>
 <div class="footer">
-    <input type="text" id="msgInput" placeholder="اكتب رسالة للجميع..." autocomplete="off">
-    <button onclick="send()">🚀</button>
+    <input type="text" id="msgInput" placeholder="اكتبي رسالة للجميع..." autocomplete="off">
+    <button onclick="sendMsg()">🚀</button>
 </div>
 
 <script>
@@ -35,14 +31,13 @@
     tg.expand();
 
     const BOT_TOKEN = "8649626005:AAEghmmvR1ykEdPqGxWBoOhHr3ZGb1bFBys";
-    // ملاحظة: جلب التحديثات يعمل مع الرسائل الخاصة بالبوت
-    // لكي يرى الجميع الرسائل، يجب أن يرسلوا رسالة للبوت أولاً
-    let lastId = 0;
+    const CHANNEL_ID = "@fastfoodt";
+    const myName = tg.initDataUnsafe?.user?.first_name || "مستخدم";
+    let lastUpdateId = 0;
 
-    async function send() {
+    async function sendMsg() {
         const input = document.getElementById('msgInput');
         const text = input.value.trim();
-        const name = tg.initDataUnsafe?.user?.first_name || "مستخدم";
         if (!text) return;
 
         try {
@@ -50,54 +45,53 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    chat_id: tg.initDataUnsafe?.user?.id, // يرسل للمستخدم نفسه كنسخة
-                    text: `<b>${name}</b>: ${text}`,
+                    chat_id: CHANNEL_ID,
+                    text: `<b>${myName}</b>: ${text}`,
                     parse_mode: 'HTML'
                 })
             });
             input.value = '';
-        } catch (e) { console.error("إرسال فاشل"); }
+            fetchUpdates(); // تحديث فوري بعد الإرسال
+        } catch (e) { console.error(e); }
     }
 
-    async function updateChat() {
+    async function fetchUpdates() {
         try {
-            // استخدام وسيط لتجنب مشاكل المتصفح
-            const proxy = "https://api.allorigins.win/get?url=";
-            const url = encodeURIComponent(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${lastId + 1}`);
-            
-            const response = await fetch(proxy + url);
-            const rawData = await response.json();
-            const data = JSON.parse(rawData.contents);
+            // جلب التحديثات من البوت مباشرة
+            const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`);
+            const data = await response.json();
 
             if (data.ok && data.result.length > 0) {
                 data.result.forEach(update => {
-                    lastId = update.update_id;
-                    const m = update.message;
-                    if (m && m.text) {
-                        display(m.text);
+                    lastUpdateId = update.update_id;
+                    const message = update.channel_post || update.message;
+                    if (message && message.text) {
+                        renderMsg(message.text);
                     }
                 });
             }
-        } catch (e) { console.log("جاري الانتظار..."); }
+        } catch (e) { console.log("إعادة المحاولة..."); }
     }
 
-    function display(fullText) {
-        const box = document.getElementById('chat-box');
-        const parts = fullText.split(': ');
-        const user = parts[0] || "مجهول";
-        const content = parts[1] || fullText;
+    function renderMsg(fullText) {
+        const container = document.getElementById('chat-container');
+        const isMine = fullText.startsWith(myName);
         
-        const isMine = fullText.includes(tg.initDataUnsafe?.user?.first_name);
-
         const div = document.createElement('div');
         div.className = `msg ${isMine ? 'my-msg' : ''}`;
-        div.innerHTML = `<span class="user">${user}</span>${content}`;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
+        
+        // استخراج الاسم والنص
+        const splitText = fullText.split(': ');
+        const user = splitText[0] || "مجهول";
+        const content = splitText[1] || fullText;
+
+        div.innerHTML = `<span class="user-name">${user}</span>${content}`;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
     }
 
-    // تحديث كل ثانية (سرعة فائقة)
-    setInterval(updateChat, 1000);
+    // تشغيل الجلب اللحظي
+    setInterval(fetchUpdates, 2000);
 </script>
 </body>
 </html>
