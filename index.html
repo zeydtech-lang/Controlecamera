@@ -3,174 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZeydTech Chat V2</title>
+    <title>ZeydTech Chat</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg-color: var(--tg-theme-bg-color, #0b141a);
-            --text-color: var(--tg-theme-text-color, #ffffff);
-            --button-color: var(--tg-theme-button-color, #00a884);
-            --button-text: var(--tg-theme-button-text-color, #ffffff);
-            --secondary-bg: var(--tg-theme-secondary-bg-color, #1c272f);
-        }
-
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            font-family: sans-serif;
+            background-color: #0b141a;
+            color: white;
             margin: 0;
             display: flex;
             flex-direction: column;
             height: 100vh;
-            overflow: hidden;
         }
 
+        /* رأس الصفحة */
         header {
-            background-color: var(--secondary-bg);
+            background: #1c272f;
             padding: 15px;
             text-align: center;
             font-weight: bold;
-            border-bottom: 2px solid var(--button-color);
+            border-bottom: 2px solid #00a884;
         }
 
+        /* صندوق الإدخال في الأعلى لضمان ظهوره */
+        .input-section {
+            background: #121b22;
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            border-bottom: 1px solid #2a3942;
+        }
+
+        input {
+            flex: 1;
+            background: #2a3942;
+            border: 1px solid #00a884;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            outline: none;
+            font-size: 16px;
+        }
+
+        button {
+            background: #00a884;
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* منطقة عرض الرسائل */
         #chat-container {
             flex: 1;
             overflow-y: auto;
             padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-        }
-
-        .message {
-            max-width: 85%;
-            padding: 10px 14px;
-            border-radius: 15px;
-            font-size: 15px;
-            line-height: 1.4;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .sent {
-            align-self: flex-end;
-            background-color: var(--button-color);
-            color: var(--button-text);
-            border-bottom-right-radius: 2px;
-        }
-
-        .received {
-            align-self: flex-start;
-            background-color: var(--secondary-bg);
-            border-bottom-left-radius: 2px;
-        }
-
-        .user-name {
-            display: block;
-            font-size: 0.7em;
-            margin-bottom: 4px;
-            font-weight: bold;
-            opacity: 0.8;
-        }
-
-        .footer {
-            padding: 10px;
-            background-color: var(--secondary-bg);
-            display: flex;
             gap: 10px;
         }
 
-        input {
-            flex: 1;
-            background-color: var(--bg-color);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: var(--text-color);
-            padding: 12px;
-            border-radius: 20px;
-            outline: none;
+        .message {
+            padding: 10px;
+            border-radius: 10px;
+            background: #1c272f;
+            max-width: 85%;
+            font-size: 14px;
+            line-height: 1.4;
         }
 
-        button {
-            background-color: var(--button-color);
-            color: var(--button-text);
-            border: none;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
+        .user-label {
+            color: #00a884;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 3px;
         }
     </style>
 </head>
 <body>
 
-<header>دردشة ZeydTech - البوت الجديد</header>
+<header>دردشة ZeydTech الجماعية</header>
 
-<div id="chat-container">
-    <div class="message received">
-        <span class="user-name">النظام</span>
-        تم تحديث البوت بنجاح! يمكنك الآن بدء الدردشة.
-    </div>
+<div class="input-section">
+    <input type="text" id="msgInput" placeholder="اكتبي رسالتك هنا..." autocomplete="off">
+    <button onclick="sendMessage()">إرسال</button>
 </div>
 
-<div class="footer">
-    <input type="text" id="msgInput" placeholder="اكتب رسالة..." autocomplete="off">
-    <button id="sendBtn">🚀</button>
+<div id="chat-container">
+    <div class="message">
+        <span class="user-label">النظام:</span>
+        أهلاً بكِ! خانة الكتابة الآن في الأعلى. جربي كتابة رسالة واضغطي "إرسال".
+    </div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // التوكن الجديد المدمج
     const BOT_TOKEN = "8649626005:AAEghmmvR1ykEdPqGxWBoOhHr3ZGb1bFBys";
-    const CHANNEL_ID = "@fastfoodt"; 
-
-    const chatContainer = document.getElementById('chat-container');
-    const msgInput = document.getElementById('msgInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const myName = tg.initDataUnsafe?.user?.first_name || "مستخدم";
-
-    function addMessage(name, text, type) {
-        const div = document.createElement('div');
-        div.className = `message ${type}`;
-        div.innerHTML = `<span class="user-name">${name}</span>${text}`;
-        chatContainer.appendChild(div);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
+    const CHANNEL_ID = "@fastfoodt";
 
     async function sendMessage() {
-        const text = msgInput.value.trim();
+        const input = document.getElementById('msgInput');
+        const text = input.value.trim();
+        const chatContainer = document.getElementById('chat-container');
+        const user = tg.initDataUnsafe?.user?.first_name || "مستخدم";
+
         if (!text) return;
 
-        addMessage(myName, text, 'sent');
-        msgInput.value = '';
+        // إظهار الرسالة في التطبيق
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message';
+        msgDiv.innerHTML = `<span class="user-label">أنتِ:</span>${text}`;
+        chatContainer.prepend(msgDiv); // تظهر في الأعلى فوراً
+
+        input.value = '';
         tg.HapticFeedback.impactOccurred('medium');
 
+        // إرسال الرسالة للقناة
         try {
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     chat_id: CHANNEL_ID,
-                    text: `<b>👤 ${myName}:</b>\n${text}`,
+                    text: `<b>👤 ${user}:</b>\n${text}`,
                     parse_mode: 'HTML'
                 })
             });
-        } catch (e) { 
-            console.error("خطأ في الإرسال"); 
-        }
+        } catch (e) { console.error("خطأ"); }
     }
-
-    sendBtn.onclick = sendMessage;
-    msgInput.onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
 </script>
 </body>
 </html>
