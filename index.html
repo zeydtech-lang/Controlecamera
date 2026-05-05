@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -6,7 +6,7 @@
     <title>ZeydTech Global Store</title>
     <style>
         :root { --primary: #f59e0b; --dark: #1e293b; --light: #f1f5f9; --white: #ffffff; }
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--light); margin: 0; padding-bottom: 30px; color: var(--dark); line-height: 1.6; }
         
         header { background: var(--dark); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
@@ -14,7 +14,7 @@
         .logo span { color: var(--primary); }
         
         .nav-tabs { display: flex; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 12px; }
-        .nav-tabs button { background: none; border: none; color: white; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+        .nav-tabs button { background: none; border: none; color: white; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: 0.3s; }
         .nav-tabs button.active { background: var(--primary); color: var(--dark); }
 
         .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
@@ -47,7 +47,7 @@
 
 <div id="loadingOverlay">
     <div class="spinner"></div>
-    <div style="font-weight: bold;">جاري معالجة البيانات سحابياً...</div>
+    <div style="font-weight: bold;">جاري الاتصال بالسحاب...</div>
 </div>
 
 <header>
@@ -60,7 +60,7 @@
 
 <div class="container">
     <section id="shop" class="section active">
-        <div id="shopGrid" class="grid">جاري تحميل المنتجات...</div>
+        <div id="shopGrid" class="grid">جاري تحميل المنتجات من السحابة...</div>
     </section>
 
     <section id="admin" class="section">
@@ -69,11 +69,11 @@
             <input type="text" id="pName" placeholder="اسم المنتج">
             <input type="number" id="pPrice" placeholder="السعر (د.ج)">
             <input type="file" id="pImage" accept="image/*">
-            <button class="btn btn-primary" onclick="saveProduct()">حفظ المنتج ✅</button>
+            <button class="btn btn-primary" onclick="saveProduct()">حفظ في قاعدة البيانات ✅</button>
         </div>
         <div class="card-box">
             <h3>📥 الطلبات المستلمة</h3>
-            <div id="ordersList">لا توجد طلبات بعد.</div>
+            <div id="ordersList">لا توجد طلبات حالياً.</div>
         </div>
     </section>
 </div>
@@ -92,14 +92,14 @@
         <h3 id="orderTitle">طلب منتج</h3>
         <input type="text" id="cName" placeholder="اسمك الكامل">
         <input type="tel" id="cPhone" placeholder="رقم الهاتف">
-        <button class="btn btn-primary" onclick="submitOrder()">تأكيد الطلب ✅</button>
+        <button class="btn btn-primary" onclick="submitOrder()">إرسال الطلب ✅</button>
         <button onclick="closeModal('orderModal')" style="width:100%; border:none; background:none; color:red; margin-top:10px; cursor:pointer;">إلغاء</button>
     </div>
 </div>
 
 <script>
-    // الرابط الذي أرسلتِه (مدمج وجاهز)
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3CvOT5sWS5sF7xqMCQtVQI13rpz4G0kXV4U8I8pPdAiiCC4YWhLpmrUoLJl0R1ffAXA/exec";
+    // الرابط الجديد الذي قمتِ بإنشائه بنجاح
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlYV77riL0v9oUQemvU5YPhaOXYJ__zcbr8DHXTii85xF6kv9lwP6PUhT4ogpSUhVIJw/exec";
 
     let products = [];
     let currentPIdx = null;
@@ -112,13 +112,13 @@
             products = await res.json();
             render();
         } catch(e) { 
-            document.getElementById('shopGrid').innerHTML = "خطأ في الاتصال. تأكدي من التشغيل عبر GitHub Pages."; 
+            document.getElementById('shopGrid').innerHTML = "<div style='text-align:center; padding:20px;'>خطأ في الاتصال بالسحاب. يرجى التأكد من تشغيل الموقع عبر GitHub Pages.</div>"; 
         }
     }
 
     function render() {
         const grid = document.getElementById('shopGrid');
-        if(products.length === 0) { grid.innerHTML = "المتجر فارغ حالياً."; return; }
+        if(products.length === 0) { grid.innerHTML = "<div style='text-align:center; padding:20px;'>المتجر فارغ حالياً.</div>"; return; }
         grid.innerHTML = products.map((p, i) => `
             <div class="item-card">
                 <img src="${p.img || 'https://via.placeholder.com/200'}" alt="${p.name}">
@@ -135,27 +135,33 @@
         const name = document.getElementById('pName').value;
         const price = document.getElementById('pPrice').value;
         const file = document.getElementById('pImage').files[0];
-        if(!name || !price || !file) return alert("يرجى ملء البيانات");
+        if(!name || !price || !file) return alert("يرجى إكمال جميع البيانات");
         
         toggleLoading(true);
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = async function() {
             const payload = { action: "saveProduct", name: name, price: price, img: reader.result };
-            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-            if(await res.text() === "Success") { alert("تم الحفظ!"); location.reload(); }
+            try {
+                const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+                if(await res.text() === "Success") { 
+                    alert("تم حفظ المنتج بنجاح! ✅"); 
+                    location.reload(); 
+                }
+            } catch(e) { alert("حدث خطأ في الحفظ."); }
             toggleLoading(false);
         };
     }
 
     async function loginAdmin() {
         const pass = document.getElementById('adminPass').value;
+        if(!pass) return;
         toggleLoading(true);
         try {
             const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({action: "adminLogin", pass: pass}) });
             const result = await res.text();
             if(result === "WrongPass") {
-                alert("كلمة مرور خاطئة!");
+                alert("كلمة مرور غير صحيحة!");
             } else {
                 const data = JSON.parse(result);
                 products = JSON.parse(data.products);
@@ -163,28 +169,34 @@
                 closeModal('adminLock');
                 switchTab('admin', document.getElementById('btnAdmin'));
             }
-        } catch(e) { alert("خطأ في الاتصال بالسحاب."); }
+        } catch(e) { alert("فشل الاتصال بالسحابة."); }
         toggleLoading(false);
     }
 
     async function submitOrder() {
         const name = document.getElementById('cName').value;
         const phone = document.getElementById('cPhone').value;
-        if(!name || !phone) return alert("يرجى إدخال البيانات");
+        if(!name || !phone) return alert("يرجى ملء البيانات");
         toggleLoading(true);
         const payload = { action: "addOrder", customer: name, phone: phone, prodName: products[currentPIdx].name };
-        const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-        if(await res.text() === "OrderSuccess") { alert("تم الطلب بنجاح!"); closeModal('orderModal'); }
+        try {
+            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+            if(await res.text() === "OrderSuccess") { 
+                alert("تم إرسال طلبك بنجاح! ✅"); 
+                closeModal('orderModal'); 
+            }
+        } catch(e) { alert("فشل إرسال الطلب."); }
         toggleLoading(false);
     }
 
     function renderOrders(orders) {
         document.getElementById('ordersList').innerHTML = orders.map(o => `
             <div style="background:#f8fafc; padding:12px; border-radius:12px; border-right:4px solid var(--primary); margin-bottom:10px;">
-                <b>👤 ${o.customer}</b> | 📞 ${o.phone}<br>
-                🛒 المنتج: ${o.prodName}
+                <b>👤 الزبون: ${o.customer}</b><br>
+                📞 الهاتف: ${o.phone}<br>
+                🛒 المنتج المطلبو: ${o.prodName}
             </div>
-        `).reverse().join('') || 'لا توجد طلبات';
+        `).reverse().join('') || 'لا توجد طلبات حالياً.';
     }
 
     function switchTab(id, btn) {
