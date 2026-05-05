@@ -1,97 +1,207 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>دردشة ZeydTech</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZeydTech Global Store</title>
     <style>
-        body { font-family: sans-serif; background-color: #0b141a; color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        header { background: #1c272f; padding: 15px; text-align: center; border-bottom: 2px solid #00a884; font-weight: bold; }
-        #chat-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { padding: 10px; border-radius: 10px; background: #1c272f; max-width: 85%; font-size: 14px; align-self: flex-start; border-right: 3px solid #00a884; }
-        .my-msg { align-self: flex-end; background: #005c4b; border-right: none; border-left: 3px solid #fff; }
-        .user-name { display: block; font-size: 11px; color: #00a884; font-weight: bold; margin-bottom: 3px; }
-        .footer { background: #121b22; padding: 10px; display: flex; gap: 8px; border-top: 1px solid #2a3942; }
-        input { flex: 1; background: #2a3942; border: 1px solid #3b4a54; color: white; padding: 12px; border-radius: 20px; outline: none; }
-        button { background: #00a884; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; }
+        :root { --primary: #f59e0b; --dark: #1e293b; --light: #f1f5f9; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; transition: 0.2s; }
+        body { background-color: var(--light); margin: 0; padding-bottom: 20px; color: var(--dark); }
+        header { background: var(--dark); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .logo { font-size: 1.2rem; font-weight: 800; }
+        .logo span { color: var(--primary); }
+        .nav-tabs { display: flex; gap: 5px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 12px; }
+        .nav-tabs button { background: none; border: none; color: white; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+        .nav-tabs button.active { background: var(--primary); color: var(--dark); }
+        .container { max-width: 1000px; margin: 15px auto; padding: 0 12px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .card-box { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
+        input, textarea { width: 100%; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; margin-bottom: 10px; outline: none; font-size: 1rem; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; background: var(--primary); color: var(--dark); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        .item-card { background: white; border-radius: 15px; overflow: hidden; border: 1px solid #eee; display: flex; flex-direction: column; height: 100%; }
+        .item-card img { width: 100%; height: 140px; object-fit: cover; background: #eee; }
+        .item-info { padding: 10px; text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        #loading { display:none; position:fixed; inset:0; background:rgba(255,255,255,0.8); z-index:9999; align-items:center; justify-content:center; font-weight:bold; color:var(--primary); flex-direction: column; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(5px); }
+        .modal-body { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; }
     </style>
 </head>
 <body>
 
-<header>دردشة ZeydTech الحية</header>
-<div id="chat-container"></div>
-<div class="footer">
-    <input type="text" id="msgInput" placeholder="اكتبي رسالة للجميع..." autocomplete="off">
-    <button onclick="sendMsg()">🚀</button>
+<div id="loading">
+    <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
+    جاري الاتصال بالسحاب...
+</div>
+
+<header>
+    <div class="logo">ZeydTech <span>Store</span></div>
+    <div class="nav-tabs">
+        <button onclick="switchTab('shop', this)" id="btnShop" class="active">🛒 المتجر</button>
+        <button onclick="openAdminLock()" id="btnAdmin">⚙️ الإدارة</button>
+    </div>
+</header>
+
+<div class="container">
+    <section id="shop" class="section active">
+        <div id="shopGrid" class="grid">جاري تحميل المنتجات...</div>
+    </section>
+
+    <section id="admin" class="section">
+        <div class="card-box">
+            <h3>📦 إضافة منتج جديد</h3>
+            <input type="text" id="pName" placeholder="اسم المنتج">
+            <input type="number" id="pPrice" placeholder="السعر (د.ج)">
+            <input type="number" id="pQty" placeholder="الكمية">
+            <textarea id="pDesc" placeholder="وصف المنتج"></textarea>
+            <input type="file" id="pImage" accept="image/*">
+            <button class="btn" onclick="saveProduct()">حفظ في السحاب ✅</button>
+        </div>
+        <div class="card-box">
+            <h3>📥 الطلبات المستلمة</h3>
+            <div id="ordersList">لا توجد طلبات بعد</div>
+        </div>
+    </section>
+</div>
+
+<div id="adminLock" class="modal">
+    <div class="modal-body" style="text-align: center;">
+        <h3>دخول المشرف</h3>
+        <input type="password" id="adminPass" placeholder="كلمة المرور" style="text-align: center;">
+        <button class="btn" onclick="loginAdmin()">دخول</button>
+        <button onclick="closeModal('adminLock')" style="border:none; background:none; color:red; margin-top:10px; cursor:pointer;">إلغاء</button>
+    </div>
+</div>
+
+<div id="orderModal" class="modal">
+    <div class="modal-body">
+        <h3 id="orderTitle">طلب منتج</h3>
+        <input type="text" id="cName" placeholder="اسمك الكامل">
+        <input type="tel" id="cPhone" placeholder="رقم الهاتف">
+        <button class="btn" onclick="submitOrder()">تأكيد الطلب ✅</button>
+        <button onclick="closeModal('orderModal')" style="width:100%; border:none; background:none; color:red; margin-top:10px; cursor:pointer;">إلغاء</button>
+    </div>
 </div>
 
 <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3CvOT5sWS5sF7xqMCQtVQI13rpz4G0kXV4U8I8pPdAiiCC4YWhLpmrUoLJl0R1ffAXA/exec";
 
-    const BOT_TOKEN = "8649626005:AAEghmmvR1ykEdPqGxWBoOhHr3ZGb1bFBys";
-    const CHANNEL_ID = "@fastfoodt";
-    const myName = tg.initDataUnsafe?.user?.first_name || "مستخدم";
-    let lastUpdateId = 0;
+    let products = [];
+    let currentPIdx = null;
 
-    async function sendMsg() {
-        const input = document.getElementById('msgInput');
-        const text = input.value.trim();
-        if (!text) return;
+    window.onload = loadData;
 
+    async function loadData() {
         try {
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: CHANNEL_ID,
-                    text: `<b>${myName}</b>: ${text}`,
-                    parse_mode: 'HTML'
-                })
-            });
-            input.value = '';
-            fetchUpdates(); // تحديث فوري بعد الإرسال
-        } catch (e) { console.error(e); }
+            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({action: "getData"}) });
+            products = await res.json();
+            render();
+        } catch(e) { 
+            document.getElementById('shopGrid').innerText = "خطأ في الاتصال. تأكد من تفعيل السكريبت."; 
+        }
     }
 
-    async function fetchUpdates() {
-        try {
-            // جلب التحديثات من البوت مباشرة
-            const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`);
-            const data = await response.json();
+    function render() {
+        const grid = document.getElementById('shopGrid');
+        if(products.length === 0) { grid.innerText = "المتجر فارغ حالياً"; return; }
+        grid.innerHTML = products.map((p, i) => `
+            <div class="item-card">
+                <img src="${p.img || 'https://via.placeholder.com/150'}">
+                <div class="item-info">
+                    <b>${p.name}</b>
+                    <div style="color:var(--primary); font-weight:bold">${p.price} د.ج</div>
+                    <button class="btn" style="padding:6px; font-size:0.8rem; margin-top:8px" onclick="openOrder(${i})">طلب الآن</button>
+                </div>
+            </div>
+        `).join('');
+    }
 
-            if (data.ok && data.result.length > 0) {
-                data.result.forEach(update => {
-                    lastUpdateId = update.update_id;
-                    const message = update.channel_post || update.message;
-                    if (message && message.text) {
-                        renderMsg(message.text);
-                    }
-                });
+    async function saveProduct() {
+        const file = document.getElementById('pImage').files[0];
+        if(!file) return alert("يرجى اختيار صورة");
+        toggleLoading(true);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async function() {
+            const payload = {
+                action: "saveProduct",
+                name: document.getElementById('pName').value,
+                price: document.getElementById('pPrice').value,
+                qty: document.getElementById('pQty').value,
+                desc: document.getElementById('pDesc').value,
+                img: reader.result
+            };
+            try {
+                const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+                if(await res.text() === "Success") { alert("تم الحفظ بنجاح!"); location.reload(); }
+            } catch(e) { alert("فشل الحفظ. تأكد من الصلاحيات."); }
+            toggleLoading(false);
+        };
+    }
+
+    async function loginAdmin() {
+        const pass = document.getElementById('adminPass').value;
+        toggleLoading(true);
+        try {
+            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({action: "adminLogin", pass: pass}) });
+            const result = await res.text();
+            if(result === "WrongPass") {
+                alert("كلمة مرور خاطئة!");
+            } else {
+                const data = JSON.parse(result);
+                products = JSON.parse(data.products);
+                renderOrders(JSON.parse(data.orders));
+                closeModal('adminLock');
+                switchTab('admin', document.getElementById('btnAdmin'));
             }
-        } catch (e) { console.log("إعادة المحاولة..."); }
+        } catch(e) { alert("خطأ في تسجيل الدخول."); }
+        toggleLoading(false);
     }
 
-    function renderMsg(fullText) {
-        const container = document.getElementById('chat-container');
-        const isMine = fullText.startsWith(myName);
-        
-        const div = document.createElement('div');
-        div.className = `msg ${isMine ? 'my-msg' : ''}`;
-        
-        // استخراج الاسم والنص
-        const splitText = fullText.split(': ');
-        const user = splitText[0] || "مجهول";
-        const content = splitText[1] || fullText;
-
-        div.innerHTML = `<span class="user-name">${user}</span>${content}`;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
+    async function submitOrder() {
+        const name = document.getElementById('cName').value;
+        const phone = document.getElementById('cPhone').value;
+        if(!name || !phone) return alert("يرجى إدخال البيانات");
+        toggleLoading(true);
+        const payload = { 
+            action: "addOrder", 
+            customer: name, 
+            phone: phone, 
+            prodName: products[currentPIdx].name, 
+            qty: 1 
+        };
+        try {
+            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+            if(await res.text() === "OrderSuccess") { 
+                alert("تم إرسال طلبك بنجاح! ✅"); 
+                closeModal('orderModal'); 
+            }
+        } catch(e) { alert("خطأ في إرسال الطلب."); }
+        toggleLoading(false);
     }
 
-    // تشغيل الجلب اللحظي
-    setInterval(fetchUpdates, 2000);
+    function renderOrders(orders) {
+        document.getElementById('ordersList').innerHTML = orders.map(o => `
+            <div class="card-box" style="border-right:5px solid var(--primary); padding:12px; margin-bottom:8px">
+                <b>👤 ${o.customer}</b><br>
+                📞 ${o.phone}<br>
+                🛒 المنتج: <b>${o.prodName}</b>
+            </div>
+        `).reverse().join('') || 'لا توجد طلبات';
+    }
+
+    function switchTab(id, btn) {
+        if(id === 'admin' && !document.getElementById('admin').classList.contains('active')) { openAdminLock(); return; }
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active'); btn.classList.add('active');
+    }
+    function openOrder(idx) { currentPIdx = idx; document.getElementById('orderModal').style.display = 'flex'; }
+    function openAdminLock() { document.getElementById('adminLock').style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function toggleLoading(show) { document.getElementById('loading').style.display = show ? 'flex' : 'none'; }
 </script>
 </body>
 </html>
