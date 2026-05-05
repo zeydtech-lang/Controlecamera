@@ -2,213 +2,123 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZeydTech Global Store</title>
     <style>
         :root { --primary: #f59e0b; --dark: #1e293b; --light: #f1f5f9; --white: #ffffff; }
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { background-color: var(--light); margin: 0; padding-bottom: 30px; color: var(--dark); line-height: 1.6; }
-        
-        header { background: var(--dark); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .logo { font-size: 1.3rem; font-weight: 800; }
-        .logo span { color: var(--primary); }
-        
-        .nav-tabs { display: flex; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 12px; }
-        .nav-tabs button { background: none; border: none; color: white; padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: 0.3s; }
-        .nav-tabs button.active { background: var(--primary); color: var(--dark); }
-
+        header { background: var(--dark); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
+        .nav-tabs button { background: none; border: none; color: white; padding: 10px 15px; cursor: pointer; font-weight: 600; }
+        .nav-tabs button.active { background: var(--primary); color: var(--dark); border-radius: 8px; }
         .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
-        .section { display: none; animation: fadeIn 0.4s ease; }
+        .section { display: none; }
         .section.active { display: block; }
-
-        .card-box { background: var(--white); padding: 25px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #eef2f6; }
-        h3 { margin-top: 0; color: var(--dark); border-right: 4px solid var(--primary); padding-right: 10px; font-size: 1.1rem; }
-        
-        input, textarea { width: 100%; padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 12px; margin-bottom: 15px; outline: none; font-size: 1rem; }
-        .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-        .btn-primary { background: var(--primary); color: var(--dark); }
-
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 15px; }
-        .item-card { background: var(--white); border-radius: 18px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.03); border: 1px solid #eee; display: flex; flex-direction: column; }
-        .item-card img { width: 100%; height: 160px; object-fit: cover; background: #f9fafb; }
-        .item-info { padding: 12px; text-align: center; flex-grow: 1; }
-        .price { color: var(--primary); font-weight: 800; font-size: 1.1rem; margin: 8px 0; }
-
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(4px); }
-        .modal-body { background: var(--white); padding: 30px; border-radius: 25px; width: 100%; max-width: 400px; }
-
-        #loadingOverlay { display:none; position:fixed; inset:0; background:rgba(255,255,255,0.9); z-index:9999; flex-direction: column; align-items:center; justify-content:center; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .card-box { background: var(--white); padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; background: var(--primary); color: var(--dark); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+        .item-card { background: var(--white); border-radius: 12px; overflow: hidden; border: 1px solid #eee; text-align: center; }
+        .item-card img { width: 100%; height: 150px; object-fit: cover; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-body { background: var(--white); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; }
+        #loading { display:none; position:fixed; inset:0; background:rgba(255,255,255,0.8); z-index:9999; align-items:center; justify-content:center; flex-direction:column; }
     </style>
 </head>
 <body>
 
-<div id="loadingOverlay">
-    <div class="spinner"></div>
-    <div style="font-weight: bold;">جاري الاتصال بالسحاب...</div>
-</div>
+<div id="loading"><div>جاري المعالجة...</div></div>
 
 <header>
-    <div class="logo">ZeydTech <span>Store</span></div>
+    <div style="font-weight: bold;">ZeydTech <span>Store</span></div>
     <div class="nav-tabs">
-        <button onclick="switchTab('shop', this)" id="btnShop" class="active">🛒 المتجر</button>
-        <button onclick="openAdminLock()" id="btnAdmin">⚙️ الإدارة</button>
+        <button onclick="switchTab('shop', this)" class="active">🛒 المتجر</button>
+        <button onclick="openAdminLock()">⚙️ الإدارة</button>
     </div>
 </header>
 
 <div class="container">
     <section id="shop" class="section active">
-        <div id="shopGrid" class="grid">جاري تحميل المنتجات من السحابة...</div>
+        <div id="shopGrid" class="grid">جاري التحميل...</div>
     </section>
 
     <section id="admin" class="section">
         <div class="card-box">
-            <h3>📦 إضافة منتج جديد</h3>
+            <h3>إضافة منتج</h3>
             <input type="text" id="pName" placeholder="اسم المنتج">
-            <input type="number" id="pPrice" placeholder="السعر (د.ج)">
+            <input type="number" id="pPrice" placeholder="السعر">
             <input type="file" id="pImage" accept="image/*">
-            <button class="btn btn-primary" onclick="saveProduct()">حفظ في قاعدة البيانات ✅</button>
+            <button class="btn" onclick="saveProduct()">حفظ ✅</button>
         </div>
-        <div class="card-box">
-            <h3>📥 الطلبات المستلمة</h3>
-            <div id="ordersList">لا توجد طلبات حالياً.</div>
-        </div>
+        <div id="ordersList"></div>
     </section>
 </div>
 
 <div id="adminLock" class="modal">
-    <div class="modal-body" style="text-align: center;">
-        <h3>دخول المشرف</h3>
-        <input type="password" id="adminPass" placeholder="كلمة المرور" style="text-align: center;">
-        <button class="btn btn-primary" onclick="loginAdmin()">تأكيد الدخول</button>
-        <button onclick="closeModal('adminLock')" style="border:none; background:none; margin-top:15px; cursor:pointer;">إلغاء</button>
-    </div>
-</div>
-
-<div id="orderModal" class="modal">
     <div class="modal-body">
-        <h3 id="orderTitle">طلب منتج</h3>
-        <input type="text" id="cName" placeholder="اسمك الكامل">
-        <input type="tel" id="cPhone" placeholder="رقم الهاتف">
-        <button class="btn btn-primary" onclick="submitOrder()">إرسال الطلب ✅</button>
-        <button onclick="closeModal('orderModal')" style="width:100%; border:none; background:none; color:red; margin-top:10px; cursor:pointer;">إلغاء</button>
+        <h3>دخول الإدارة</h3>
+        <input type="password" id="adminPass" placeholder="كلمة المرور">
+        <button class="btn" onclick="loginAdmin()">دخول</button>
+        <button onclick="closeModal('adminLock')" style="width:100%; background:none; border:none; margin-top:10px;">إلغاء</button>
     </div>
 </div>
 
 <script>
-    // الرابط الجديد الذي قمتِ بإنشائه بنجاح
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlYV77riL0v9oUQemvU5YPhaOXYJ__zcbr8DHXTii85xF6kv9lwP6PUhT4ogpSUhVIJw/exec";
-
-    let products = [];
-    let currentPIdx = null;
+    // الرابط الجديد الذي أرسلتِه
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWt5Pbg-te2_D-SVAfT_AzC0v60jPKyXc-3utWo7SeqD-Re08EgGIKqptTdycWPP5vYw/exec";
 
     window.onload = loadData;
 
     async function loadData() {
         try {
             const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({action: "getData"}) });
-            products = await res.json();
-            render();
-        } catch(e) { 
-            document.getElementById('shopGrid').innerHTML = "<div style='text-align:center; padding:20px;'>خطأ في الاتصال بالسحاب. يرجى التأكد من تشغيل الموقع عبر GitHub Pages.</div>"; 
-        }
+            const products = await res.json();
+            const grid = document.getElementById('shopGrid');
+            grid.innerHTML = products.map(p => `
+                <div class="item-card">
+                    <img src="${p.img}">
+                    <div style="padding:10px;"><b>${p.name}</b><br>${p.price} د.ج</div>
+                </div>
+            `).join('') || "المتجر فارغ";
+        } catch(e) { document.getElementById('shopGrid').innerHTML = "تأكدي من النشر لـ 'Everyone'"; }
     }
 
-    function render() {
-        const grid = document.getElementById('shopGrid');
-        if(products.length === 0) { grid.innerHTML = "<div style='text-align:center; padding:20px;'>المتجر فارغ حالياً.</div>"; return; }
-        grid.innerHTML = products.map((p, i) => `
-            <div class="item-card">
-                <img src="${p.img || 'https://via.placeholder.com/200'}" alt="${p.name}">
-                <div class="item-info">
-                    <b>${p.name}</b>
-                    <div class="price">${p.price} د.ج</div>
-                    <button class="btn btn-primary" style="padding:8px; font-size:0.85rem;" onclick="openOrder(${i})">طلب الآن</button>
-                </div>
-            </div>
-        `).join('');
+    async function loginAdmin() {
+        const pass = document.getElementById('adminPass').value;
+        document.getElementById('loading').style.display = 'flex';
+        try {
+            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({action: "adminLogin", pass: pass}) });
+            const text = await res.text();
+            if(text === "WrongPass") alert("خطأ!");
+            else {
+                closeModal('adminLock');
+                document.getElementById('admin').classList.add('active');
+                document.getElementById('shop').classList.remove('active');
+            }
+        } catch(e) { alert("فشل الاتصال"); }
+        document.getElementById('loading').style.display = 'none';
     }
 
     async function saveProduct() {
         const name = document.getElementById('pName').value;
         const price = document.getElementById('pPrice').value;
         const file = document.getElementById('pImage').files[0];
-        if(!name || !price || !file) return alert("يرجى إكمال جميع البيانات");
-        
-        toggleLoading(true);
+        if(!file) return;
+        document.getElementById('loading').style.display = 'flex';
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = async function() {
-            const payload = { action: "saveProduct", name: name, price: price, img: reader.result };
-            try {
-                const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-                if(await res.text() === "Success") { 
-                    alert("تم حفظ المنتج بنجاح! ✅"); 
-                    location.reload(); 
-                }
-            } catch(e) { alert("حدث خطأ في الحفظ."); }
-            toggleLoading(false);
+            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({action: "saveProduct", name, price, img: reader.result}) });
+            if(await res.text() === "Success") location.reload();
         };
     }
 
-    async function loginAdmin() {
-        const pass = document.getElementById('adminPass').value;
-        if(!pass) return;
-        toggleLoading(true);
-        try {
-            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({action: "adminLogin", pass: pass}) });
-            const result = await res.text();
-            if(result === "WrongPass") {
-                alert("كلمة مرور غير صحيحة!");
-            } else {
-                const data = JSON.parse(result);
-                products = JSON.parse(data.products);
-                renderOrders(JSON.parse(data.orders));
-                closeModal('adminLock');
-                switchTab('admin', document.getElementById('btnAdmin'));
-            }
-        } catch(e) { alert("فشل الاتصال بالسحابة."); }
-        toggleLoading(false);
-    }
-
-    async function submitOrder() {
-        const name = document.getElementById('cName').value;
-        const phone = document.getElementById('cPhone').value;
-        if(!name || !phone) return alert("يرجى ملء البيانات");
-        toggleLoading(true);
-        const payload = { action: "addOrder", customer: name, phone: phone, prodName: products[currentPIdx].name };
-        try {
-            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-            if(await res.text() === "OrderSuccess") { 
-                alert("تم إرسال طلبك بنجاح! ✅"); 
-                closeModal('orderModal'); 
-            }
-        } catch(e) { alert("فشل إرسال الطلب."); }
-        toggleLoading(false);
-    }
-
-    function renderOrders(orders) {
-        document.getElementById('ordersList').innerHTML = orders.map(o => `
-            <div style="background:#f8fafc; padding:12px; border-radius:12px; border-right:4px solid var(--primary); margin-bottom:10px;">
-                <b>👤 الزبون: ${o.customer}</b><br>
-                📞 الهاتف: ${o.phone}<br>
-                🛒 المنتج المطلبو: ${o.prodName}
-            </div>
-        `).reverse().join('') || 'لا توجد طلبات حالياً.';
-    }
-
     function switchTab(id, btn) {
-        if(id === 'admin' && !document.getElementById('admin').classList.contains('active')) { openAdminLock(); return; }
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active'); btn.classList.add('active');
+        document.getElementById(id).classList.add('active');
     }
-    function openOrder(idx) { currentPIdx = idx; document.getElementById('orderModal').style.display = 'flex'; }
     function openAdminLock() { document.getElementById('adminLock').style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function toggleLoading(show) { document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none'; }
 </script>
 </body>
 </html>
