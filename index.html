@@ -1,124 +1,35 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZeydTech Global Store</title>
+    <title>مستودع الصور السحابي</title>
     <style>
-        :root { --primary: #f59e0b; --dark: #1e293b; --light: #f1f5f9; --white: #ffffff; }
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background-color: var(--light); margin: 0; padding-bottom: 30px; color: var(--dark); line-height: 1.6; }
-        header { background: var(--dark); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
-        .nav-tabs button { background: none; border: none; color: white; padding: 10px 15px; cursor: pointer; font-weight: 600; }
-        .nav-tabs button.active { background: var(--primary); color: var(--dark); border-radius: 8px; }
-        .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
-        .section { display: none; }
-        .section.active { display: block; }
-        .card-box { background: var(--white); padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; background: var(--primary); color: var(--dark); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-        .item-card { background: var(--white); border-radius: 12px; overflow: hidden; border: 1px solid #eee; text-align: center; }
-        .item-card img { width: 100%; height: 150px; object-fit: cover; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-body { background: var(--white); padding: 25px; border-radius: 15px; width: 90%; max-width: 400px; }
-        #loading { display:none; position:fixed; inset:0; background:rgba(255,255,255,0.8); z-index:9999; align-items:center; justify-content:center; flex-direction:column; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background-color: #f4f7f6;
+        }
+        /* إعداد الإطار ليناسب شاشة الهاتف والكمبيوتر */
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
     </style>
 </head>
 <body>
 
-<div id="loading"><div>جاري المعالجة...</div></div>
+    <iframe 
+        src="https://script.google.com/macros/s/AKfycbzfijFIrohYLcIaSrUeYhx34lyQUWFffRRmNEjcND1YT37jq2Lli3cmiLvOTR4y5MSF/exec"
+        allow="camera; microphone; geolocation">
+    </iframe>
 
-<header>
-    <div style="font-weight: bold;">ZeydTech <span>Store</span></div>
-    <div class="nav-tabs">
-        <button onclick="switchTab('shop', this)" class="active">🛒 المتجر</button>
-        <button onclick="openAdminLock()">⚙️ الإدارة</button>
-    </div>
-</header>
-
-<div class="container">
-    <section id="shop" class="section active">
-        <div id="shopGrid" class="grid">جاري التحميل...</div>
-    </section>
-
-    <section id="admin" class="section">
-        <div class="card-box">
-            <h3>إضافة منتج</h3>
-            <input type="text" id="pName" placeholder="اسم المنتج">
-            <input type="number" id="pPrice" placeholder="السعر">
-            <input type="file" id="pImage" accept="image/*">
-            <button class="btn" onclick="saveProduct()">حفظ ✅</button>
-        </div>
-        <div id="ordersList"></div>
-    </section>
-</div>
-
-<div id="adminLock" class="modal">
-    <div class="modal-body">
-        <h3>دخول الإدارة</h3>
-        <input type="password" id="adminPass" placeholder="كلمة المرور">
-        <button class="btn" onclick="loginAdmin()">دخول</button>
-        <button onclick="closeModal('adminLock')" style="width:100%; background:none; border:none; margin-top:10px;">إلغاء</button>
-    </div>
-</div>
-
-<script>
-    // الرابط الجديد الذي أرسلتِه
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWt5Pbg-te2_D-SVAfT_AzC0v60jPKyXc-3utWo7SeqD-Re08EgGIKqptTdycWPP5vYw/exec";
-
-    window.onload = loadData;
-
-    async function loadData() {
-        try {
-            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({action: "getData"}) });
-            const products = await res.json();
-            const grid = document.getElementById('shopGrid');
-            grid.innerHTML = products.map(p => `
-                <div class="item-card">
-                    <img src="${p.img}">
-                    <div style="padding:10px;"><b>${p.name}</b><br>${p.price} د.ج</div>
-                </div>
-            `).join('') || "المتجر فارغ";
-        } catch(e) { document.getElementById('shopGrid').innerHTML = "تأكدي من النشر لـ 'Everyone'"; }
-    }
-
-    async function loginAdmin() {
-        const pass = document.getElementById('adminPass').value;
-        document.getElementById('loading').style.display = 'flex';
-        try {
-            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({action: "adminLogin", pass: pass}) });
-            const text = await res.text();
-            if(text === "WrongPass") alert("خطأ!");
-            else {
-                closeModal('adminLock');
-                document.getElementById('admin').classList.add('active');
-                document.getElementById('shop').classList.remove('active');
-            }
-        } catch(e) { alert("فشل الاتصال"); }
-        document.getElementById('loading').style.display = 'none';
-    }
-
-    async function saveProduct() {
-        const name = document.getElementById('pName').value;
-        const price = document.getElementById('pPrice').value;
-        const file = document.getElementById('pImage').files[0];
-        if(!file) return;
-        document.getElementById('loading').style.display = 'flex';
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = async function() {
-            const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({action: "saveProduct", name, price, img: reader.result}) });
-            if(await res.text() === "Success") location.reload();
-        };
-    }
-
-    function switchTab(id, btn) {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-    }
-    function openAdminLock() { document.getElementById('adminLock').style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-</script>
 </body>
 </html>
