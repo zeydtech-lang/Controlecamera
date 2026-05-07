@@ -3,33 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مستودع الصور السحابي</title>
+    <title>Smart Scanner - ماسح المستندات الذكي</title>
+    <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+    
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-            background-color: #f4f7f6;
-        }
-        /* إعداد الإطار ليناسب شاشة الهاتف والكمبيوتر */
-        iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
+        :root { --primary: #2563eb; --bg: #0f172a; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8fafc; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        header { background: var(--primary); color: white; width: 100%; padding: 1rem; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .main-container { width: 90%; max-width: 800px; margin-top: 20px; position: relative; }
+        
+        #video-wrapper { position: relative; border-radius: 15px; overflow: hidden; background: black; line-height: 0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        video, canvas { width: 100%; height: auto; display: block; }
+        #canvasOutput { position: absolute; top: 0; left: 0; opacity: 0.5; pointer-events: none; }
+
+        .controls { margin: 20px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        button { padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; transition: 0.3s; }
+        .btn-capture { background: var(--primary); color: white; }
+        .btn-capture:disabled { background: #94a3b8; }
+        .status { font-size: 14px; color: #64748b; margin-bottom: 10px; }
+        
+        #resultContainer { margin-top: 20px; display: none; width: 90%; max-width: 500px; }
+        #finalImage { width: 100%; border: 2px solid #ddd; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-    <iframe 
-        src="https://script.google.com/macros/s/AKfycbzfijFIrohYLcIaSrUeYhx34lyQUWFffRRmNEjcND1YT37jq2Lli3cmiLvOTR4y5MSF/exec"
-        allow="camera; microphone; geolocation">
-    </iframe>
+<header>
+    <h1>ماسح المستندات الذكي</h1>
+</header>
+
+<div class="status" id="status">جاري تحميل محرك الذكاء البصري (OpenCV)...</div>
+
+<div class="main-container">
+    <div id="video-wrapper">
+        <video id="videoInput" playsinline autoplay muted></video>
+        <canvas id="canvasOutput"></canvas>
+    </div>
+</div>
+
+<div class="controls">
+    <button id="startBtn" class="btn-capture" disabled onclick="captureDocument()">التقاط وتحسين المستند</button>
+    <button onclick="location.reload()" style="background:#64748b; color:white;">إعادة تعيين</button>
+</div>
+
+<div id="resultContainer">
+    <h3>النتيجة الممسوحة ضوئياً:</h3>
+    <img id="finalImage" src="" alt="المستند المحسن">
+    <p>يمكنك الضغط مطولاً على الصورة لحفظها.</p>
+</div>
+
+<script>
+    let video = document.getElementById('videoInput');
+    let canvasFrame = document.getElementById('canvasOutput');
+    let status = document.getElementById('status');
+    let startBtn = document.getElementById('startBtn');
+
+    // 1. التأكد من تحميل OpenCV
+    function onOpenCvReady() {
+        status.innerText = 'محرك OpenCV جاهز. جاري تشغيل الكاميرا...';
+        startCamera();
+    }
+
+    // 2. تشغيل الكاميرا
+    function startCamera() {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+            .then(function(stream) {
+                video.srcObject = stream;
+                video.play();
+                startBtn.disabled = false;
+                status.innerText = 'الكاميرا تعمل. وجهها نحو مستند.';
+                processVideo(); // بدء تحليل الإطارات
+            })
+            .catch(function(err) {
+                status.innerText = "خطأ: تأكد من تشغيل HTTPS ومنح إذن الكاميرا.";
+                console.error(err);
+            });
+    }
+
+    // 3. تحليل الفيديو لاكتشاف الحواف في الوقت الفعلي
+    function processVideo() {
+        let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+        let cap = new cv.VideoCapture(video);
+
+        function process() {
+            try {
+                cap.read(src);
+                let gray = new cv.Mat();
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
+                cv.Canny(gray, gray, 75, 200); // اكتشاف الحواف
+                
+                cv.imshow('canvasOutput', gray); // عرض الحواف المكتشفة
+                
+                gray.delete();
+                requestAnimationFrame(process);
+            } catch (err) {
+                console.log("انتهت جلسة المعالجة.");
+            }
+        };
+        setTimeout(process, 1000);
+    }
+
+    // 4. وظيفة الالتقاط وتحويل المنظور
+    function captureDocument() {
+        let src = cv.imread(video);
+        let dst = new cv.Mat();
+        
+        // تحسين الصورة: تحويلها لأبيض وأسود (كالمستندات الحقيقية)
+        cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+        cv.adaptiveThreshold(dst, dst, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
+        
+        // عرض النتيجة النهائية
+        cv.imshow('canvasOutput', dst);
+        const dataURL = canvasFrame.toDataURL('image/png');
+        document.getElementById('finalImage').src = dataURL;
+        document.getElementById('resultContainer').style.display = 'block';
+        
+        status.innerText = 'تم التقاط المستند بنجاح!';
+        src.delete(); dst.delete();
+    }
+</script>
 
 </body>
 </html>
